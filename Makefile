@@ -24,6 +24,8 @@ RELEASE_ARTIFACTS := \
 	$(OUTPUT_DIR)/tcping-linux-amd64-dynamic.tar.gz \
 	$(OUTPUT_DIR)/tcping-linux-arm64-static.tar.gz \
 	$(OUTPUT_DIR)/tcping-linux-arm64-dynamic.tar.gz \
+	$(OUTPUT_DIR)/tcping-linux-armv7-static.tar.gz \
+	$(OUTPUT_DIR)/tcping-linux-armv7-dynamic.tar.gz \
 	$(OUTPUT_DIR)/tcping-darwin-amd64-static.tar.gz \
 	$(OUTPUT_DIR)/tcping-darwin-amd64-dynamic.tar.gz \
 	$(OUTPUT_DIR)/tcping-darwin-arm64-static.tar.gz \
@@ -123,6 +125,16 @@ $(TARGET_DIR)/%/tcping: $(TARGET_DIR)/%/
 	[ $(word 3, $(subst -, ,$*)) = static ] && export CGO_ENABLED=0; \
 	go build -ldflags "-s -w -X main.version=$(VERSION)" -o $@;
 
+# Per-target tcping binary for Linux ARMv7
+.PRECIOUS: $(TARGET_DIR)/linux-armv7-%/tcping
+$(TARGET_DIR)/linux-armv7-%/tcping: $(TARGET_DIR)/linux-armv7-%/
+	@echo "[+] Building binary: $@"
+	@export GOOS=linux; \
+	export GOARCH=arm; \
+	export GOARM=7; \
+	[ $(word 1, $(subst -, ,$*)) = static ] && export CGO_ENABLED=0; \
+	go build -ldflags "-s -w -X main.version=$(VERSION)" -o $@;
+
 # Per-target tcping.exe binary (Windows)
 .PRECIOUS: $(TARGET_DIR)/windows-%/tcping.exe
 $(TARGET_DIR)/windows-%/tcping.exe: $(TARGET_DIR)/windows-%/
@@ -142,6 +154,12 @@ $(OUTPUT_DIR)/:
 
 # .tar.gz archive
 $(OUTPUT_DIR)/tcping-%.tar.gz: $(TARGET_DIR)/%/tcping $(OUTPUT_DIR)/
+	@echo "[+] Compressing binary: $@"
+	@tar -C $$(dirname $<) -czvf $@ tcping >/dev/null
+	@sha256sum $@
+
+# .tar.gz archive for Linux ARMv7
+$(OUTPUT_DIR)/tcping-linux-armv7-%.tar.gz: $(TARGET_DIR)/linux-armv7-%/tcping $(OUTPUT_DIR)/
 	@echo "[+] Compressing binary: $@"
 	@tar -C $$(dirname $<) -czvf $@ tcping >/dev/null
 	@sha256sum $@
